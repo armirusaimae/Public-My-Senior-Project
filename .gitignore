@@ -1,0 +1,7 @@
+node_modules/
+electricity.db
+electricity.db-*
+*.db
+.env
+.DS_Store
+# ESP32: ใช้ไฟล์ที่ล้างรหัส Wi-Fi แล้วเท่านั้น

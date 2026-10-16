@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PowerWatch — ระบบตรวจวัดค่าไฟฟ้า</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#EEF4FB">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="vendor/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #EEF4FB;
+    --surface: #FFFFFF;
+    --surface-alt: #E3EEFA;
+    --border: rgba(20,60,120,0.10);
+    --text-primary: #0B2545;
+    --text-secondary: #5F7B9C;
+    --accent: #1D4ED8;
+    --accent-dim: rgba(29,78,216,0.12);
+    --warm: #D98C1F;
+    --warm-dim: rgba(217,140,31,0.12);
+    --cyan: #0E9CB8;
+    --red: #DC2626;
+    --green: #15803D;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 40px;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 10px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .menu-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .menu-btn span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 2px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .brand-name {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .status-dot.offline { background: var(--red); }
+
+  /* ---------- Card base ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(20,60,120,0.06), 0 1px 2px rgba(20,60,120,0.04);
+  }
+
+  .card-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  /* ---------- Live Now ---------- */
+  .live-reading {
+    font-family: var(--mono);
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--accent);
+  }
+  .live-reading .unit {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .sub-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .sub-stat-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .sub-stat-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* ---------- Today summary ---------- */
+  .today-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .today-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .today-value.cost { color: var(--warm); }
+
+  .chart-wrap {
+    position: relative;
+    height: 140px;
+  }
+
+  /* ---------- Comparison ---------- */
+  .compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-row:last-child { border-bottom: none; }
+
+  .compare-name { font-size: 13px; color: var(--text-secondary); }
+  .compare-value { font-family: var(--mono); font-size: 15px; font-weight: 500; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .badge.up { background: rgba(220,38,38,0.12); color: var(--red); }
+  .badge.down { background: rgba(21,128,61,0.12); color: var(--green); }
+  .badge.neutral { background: var(--surface-alt); color: var(--text-secondary); }
+
+  .empty-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+    line-height: 1.6;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+  }
+
+  /* ---------- Month picker ---------- */
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .picker-row .vs {
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  select.picker {
+    flex: 1;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 10px;
+    border-radius: 4px;
+    appearance: none;
+  }
+  select.picker:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .compare-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #FFFFFF;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .compare-btn:active { opacity: 0.85; }
+
+  /* ---------- Budget progress (ของในหน้าหลัก) ---------- */
+  .budget-status-main {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: var(--mono);
+    margin-top: 2px;
+    margin-bottom: 10px;
+  }
+  .budget-progress-track {
+    width: 100%;
+    height: 8px;
+    background: var(--surface-alt);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .budget-progress-fill {
+    height: 100%;
+    background: var(--warm);
+    transition: width 0.3s ease;
+  }
+  .budget-progress-fill.over { background: var(--red); }
+
+  /* ---------- Drawer (เมนูตั้งค่า) ---------- */
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11,37,69,0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 40;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(340px, 86vw);
+    background: var(--surface);
+    box-shadow: 4px 0 24px rgba(11,37,69,0.18);
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    z-index: 50;
+    overflow-y: auto;
+    padding: 20px 18px 40px;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .drawer-title { font-size: 15px; font-weight: 700; }
+  .drawer-close {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-alt);
+    cursor: pointer; font-size: 16px; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .drawer-section { margin-bottom: 24px; }
+  .drawer-section-label {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+
+  .bill-guide-img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .bill-guide-caption {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .bill-guide-caption b { color: var(--red); }
+
+  .tariff-type-row {
+    display: flex;
+    gap: 8px;
+  }
+  .tariff-type-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .tariff-type-btn .sub { display:block; font-size: 10px; font-weight: 500; color: var(--text-secondary); margin-top: 2px; }
+  .tariff-type-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .tariff-type-btn.active .sub { color: var(--accent); }
+
+  .budget-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  input.budget-input {
+    flex: 1;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 9px 10px;
+    border-radius: 4px;
+  }
+  input.budget-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .budget-save-btn {
+    background: var(--accent);
+    color: #FFFFFF;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .budget-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    min-height: 14px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 20px;
+  }
+
+  /* ---------- Responsive: จอกว้าง (คอม/แท็บเล็ต) ---------- */
+  @media (min-width: 860px) {
+    .container {
+      max-width: 1180px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      align-items: start;
+      padding: 28px 32px;
+    }
+    header, footer { grid-column: 1 / -1; }
+    .card { margin-bottom: 0; }
+    .live-reading { font-size: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">ตั้งค่าระบบ</div>
+    <button class="drawer-close" id="drawerCloseBtn">✕</button>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">ประเภทอัตราค่าไฟ</div>
+    <img class="bill-guide-img" src="assets/bill-guide.png" alt="วิธีดูประเภทไฟจากบิลค่าไฟฟ้า">
+    <div class="bill-guide-caption">ดูเลข 3 ตัวแรกในวงกลมสีแดงบนบิลค่าไฟของคุณ เช่น <b>111</b>x = ประเภท 1.1.1, <b>112</b>x = ประเภท 1.1.2</div>
+    <div class="tariff-type-row">
+      <button class="tariff-type-btn" id="tariffBtn111" data-type="1.1.1">1.1.1<span class="sub">ไม่เกิน 150 หน่วย</span></button>
+      <button class="tariff-type-btn" id="tariffBtn112" data-type="1.1.2">1.1.2<span class="sub">เกิน 150 หน่วย</span></button>
+    </div>
+    <div class="budget-status" id="tariffStatus"></div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">งบประมาณรอบบิลนี้</div>
+    <div class="budget-row">
+      <input type="number" class="budget-input" id="budgetInput" placeholder="เช่น 1500" min="0" step="50">
+      <button class="budget-save-btn" id="budgetSaveBtn">บันทึก</button>
+    </div>
+    <div class="budget-status" id="budgetStatus"></div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-section-label">ค่า Ft (บาท/หน่วย)</div>
+    <div class="budget-row">
+      <input type="number" class="budget-input" id="ftInput" placeholder="เช่น 0.1623" min="0" step="0.0001">
+      <button class="budget-save-btn" id="ftSaveBtn">บันทึก</button>
+    </div>
+    <div class="budget-status" id="ftStatus"></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <header>
+    <div class="header-left">
+      <button class="menu-btn" id="menuBtn" aria-label="เปิดเมนูตั้งค่า"><span></span><span></span><span></span></button>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-name">PowerWatch</div>
+      </div>
+    </div>
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">กำลังเชื่อมต่อ...</span>
+    </div>
+  </header>
+
+  <!-- Live Now -->
+  <div class="card">
+    <div class="card-label">กำลังไฟฟ้าปัจจุบัน</div>
+    <div class="live-reading">
+      <span id="livePower">--</span><span class="unit">W</span>
+    </div>
+    <div class="sub-stats">
+      <div>
+        <div class="sub-stat-value" id="liveVoltage">--</div>
+        <div class="sub-stat-label">โวลต์ (V)</div>
+      </div>
+      <div>
+        <div class="sub-stat-value" id="liveCurrent">--</div>
+        <div class="sub-stat-label">แอมป์ (A)</div>
+      </div>
+      <div>
+        <div class="sub-stat-value" id="livePF">--</div>
+        <div class="sub-stat-label">Power Factor</div>
+      </div>
+      <div>
+        <div class="sub-stat-value" id="liveFreq">--</div>
+        <div class="sub-stat-label">เฮิรตซ์ (Hz)</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="margin-top: 16px;">
+      <canvas id="todayChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Today -->
+  <div class="card">
+    <div class="card-label">สรุปวันนี้</div>
+    <div class="today-grid">
+      <div>
+        <div class="today-value" id="todayKwh">-- kWh</div>
+        <div class="sub-stat-label">หน่วยที่ใช้</div>
+      </div>
+      <div>
+        <div class="today-value cost" id="todayCost">-- บาท</div>
+        <div class="sub-stat-label">ค่าไฟประมาณการ</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="todayEnergyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Budget progress (แสดงผลเฉยๆ ตั้งค่าจริงอยู่ในเมนู) -->
+  <div class="card">
+    <div class="card-label">งบประมาณรอบบิลนี้</div>
+    <div class="budget-status-main" id="budgetStatusMain">0 / 0 บาท</div>
+    <div class="budget-progress-track">
+      <div class="budget-progress-fill" id="budgetProgressFill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- 7-day trend (จุดเดิมของการ์ดสะสมวันนี้) -->
+  <div class="card">
+    <div class="section-title">เทรนด์ย้อนหลัง 7 วัน</div>
+    <div class="chart-wrap">
+      <canvas id="weekTrendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Daily trend -->
+  <div class="card">
+    <div class="section-title">เทรนด์ 30 วันล่าสุด</div>
+    <div class="chart-wrap">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Custom month comparison -->
+  <div class="card">
+    <div class="section-title">เทียบเดือนที่เลือกเอง</div>
+    <div class="picker-row">
+      <select class="picker" id="monthPickerA"></select>
+      <span class="vs">กับ</span>
+      <select class="picker" id="monthPickerB"></select>
+    </div>
+    <button class="compare-btn" id="compareBtn">เทียบ</button>
+    <div id="customCompareContent">
+      <div class="empty-note">เลือก 2 เดือนแล้วกดปุ่ม "เทียบ"</div>
+    </div>
+  </div>
+
+  <footer>ข้อมูลเก็บทุก 1 นาที · แสดงผลสรุปทุก 15 นาที</footer>
+
+</div>
+
+<script>
+  // ---------- ตั้งค่า API ----------
+  const API_BASE = '/api';
+  const fmt = (n, digits = 1) => (n === null || n === undefined || isNaN(n)) ? '--' : Number(n).toFixed(digits);
+
+  async function fetchJSON(path) {
+    const res = await fetch(`${API_BASE}${path}`);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  }
+
+  // ---------- Drawer open/close ----------
+  const drawer = document.getElementById('drawer');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+  function openDrawer() { drawer.classList.add('open'); drawerOverlay.classList.add('open'); }
+  function closeDrawer() { drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); }
+  document.getElementById('menuBtn').addEventListener('click', openDrawer);
+  document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+
+  // ---------- Live reading ----------
+  async function updateLive() {
+    try {
+      const data = await fetchJSON('/readings/latest');
+      document.getElementById('livePower').textContent = fmt(data.power, 0);
+      document.getElementById('liveVoltage').textContent = fmt(data.voltage, 1);
+      document.getElementById('liveCurrent').textContent = fmt(data.current, 2);
+      document.getElementById('livePF').textContent = fmt(data.power_factor, 2);
+      document.getElementById('liveFreq').textContent = fmt(data.frequency, 1);
+
+      document.getElementById('statusDot').classList.remove('offline');
+      document.getElementById('statusText').textContent = 'ออนไลน์';
+    } catch (err) {
+      document.getElementById('statusDot').classList.add('offline');
+      document.getElementById('statusText').textContent = 'ขาดการเชื่อมต่อ';
+      console.error('updateLive error:', err);
+    }
+  }
+
+  // ---------- Today chart + summary (ใช้ข้อมูล bucket 15 นาที แม้ ESP32 จะส่งถี่กว่านั้น) ----------
+  let todayChartInstance = null;
+  async function updateToday() {
+    try {
+      const readings = await fetchJSON('/readings/today-15min');
+      if (readings.length === 0) return;
+
+      const first = readings[0].energy;
+      const last = readings[readings.length - 1].energy;
+      const kwhToday = Math.max(0, last - first);
+
+      document.getElementById('todayKwh').textContent = `${fmt(kwhToday, 2)} kWh`;
+
+      // ค่าไฟส่วนเพิ่มของวันนี้ คำนวณที่ backend (ขั้นบันไดตามหน่วยสะสมของรอบบิล + Ft + VAT)
+      const todaySummary = await fetchJSON('/summary/today');
+      document.getElementById('todayCost').textContent = `${fmt(todaySummary.cost, 0)} บาท`;
+
+      const labels = readings.map(r => new Date(r.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+      const powerData = readings.map(r => r.power);
+
+      const ctx = document.getElementById('todayChart');
+      if (todayChartInstance) todayChartInstance.destroy();
+      todayChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: powerData,
+            borderColor: '#1D4ED8',
+            backgroundColor: 'rgba(29,78,216,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#5F7B9C', maxTicksLimit: 5, font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#5F7B9C', font: { size: 10 } }, grid: { color: 'rgba(20,60,120,0.06)' } },
+          }
+        }
+      });
+    } catch (err) {
+      console.error('updateToday error:', err);
+    }
+  }
+
+  // ---------- สะสมวันนี้ (หน่วย/บาท) แบบขั้นบันได ไม่ขึ้นลง ----------
+  let todayEnergyChartInstance = null;
+
+  async function updateTodayEnergyChart() {
+    try {
+      const summary = await fetchJSON('/summary/today');
+      const pts = summary.points || [];
+      if (pts.length < 1) return;
+
+      const labels = pts.map(p => new Date(p.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }));
+      const cumulativeKwh = pts.map(p => p.cum_kwh);
+      const cumulativeCost = pts.map(p => p.cum_cost);
+
+      const ctx = document.getElementById('todayEnergyChart');
+      if (todayEnergyChartInstance) todayEnergyChartInstance.destroy();
+      todayEnergyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'หน่วยสะสม (kWh)',
+              data: cumulativeKwh,
+              borderColor: '#0E9CB8',
+              backgroundColor: 'rgba(14,156,184,0.10)',
+              yAxisID: 'y',
+              stepped: true,
+              fill: true,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+            {
+              label: 'ค่าไฟสะสม (บาท)',
+              data: cumulativeCost,
+              borderColor: '#D98C1F',
+              backgroundColor: 'transparent',
+              yAxisID: 'y1',
+              stepped: true,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { color: '#5F7B9C', font: { size: 10 }, boxWidth: 10 } }
+          },
+          scales: {
+            x: { ticks: { color: '#5F7B9C', maxTicksLimit: 5, font: { size: 10 } }, grid: { display: false } },
+            y: {
+              position: 'left',
+              beginAtZero: true,
+              ticks: { color: '#5F7B9C', font: { size: 10 } },
+              grid: { color: 'rgba(20,60,120,0.06)' },
+              title: { display: true, text: 'kWh', color: '#5F7B9C', font: { size: 10 } }
+            },
+            y1: {
+              position: 'right',
+              beginAtZero: true,
+              ticks: { color: '#5F7B9C', font: { size: 10 } },
+              grid: { display: false },
+              title: { display: true, text: 'บาท', color: '#5F7B9C', font: { size: 10 } }
+            },
+          }
+        }
+      });
+    } catch (err) {
+      console.error('updateTodayEnergyChart error:', err);
+    }
+  }
+
+  // ---------- 7-day trend ----------
+  let weekTrendChartInstance = null;
+  async function updateWeekTrend() {
+    try {
+      const rows = await fetchJSON('/summary/daily?days=7');
+      const labels = rows.map(r => new Date(r.date).toLocaleDateString('th-TH', { weekday: 'short', day: '2-digit' }));
+      const kwhValues = rows.map(r => r.kwh_used);
+      const costValues = rows.map(r => r.cost);
+
+      const ctx = document.getElementById('weekTrendChart');
+      if (weekTrendChartInstance) weekTrendChartInstance.destroy();
+      weekTrendChartInstance = new Chart(ctx, {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'หน่วย (kWh)',
+              data: kwhValues,
+              backgroundColor: 'rgba(14,156,184,0.55)',
+              yAxisID: 'y',
+              borderRadius: 2,
+              maxBarThickness: 24,
+            },
+            {
+              type: 'line',
+              label: 'ค่าไฟ (บาท)',
+              data: costValues,
+              borderColor: '#D98C1F',
+              backgroundColor: 'transparent',
+              yAxisID: 'y1',
+              tension: 0.3,
+              pointRadius: 3,
+              borderWidth: 2,
+            },
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { color: '#5F7B9C', font: { size: 10 }, boxWidth: 10 } }
+          },
+          scales: {
+            x: { ticks: { color: '#5F7B9C', font: { size: 10 } }, grid: { display: false } },
+            y: { position: 'left', ticks: { color: '#5F7B9C', font: { size: 10 } }, grid: { color: 'rgba(20,60,120,0.06)' }, title: { display: true, text: 'kWh', color: '#5F7B9C', font: { size: 10 } } },
+            y1: { position: 'right', ticks: { color: '#5F7B9C', font: { size: 10 } }, grid: { display: false }, title: { display: true, text: 'บาท', color: '#5F7B9C', font: { size: 10 } } },
+          }
+        }
+      });
+    } catch (err) {
+      console.error('updateWeekTrend error:', err);
+    }
+  }
+
+  // ---------- 30-day trend ----------
+  let trendChartInstance = null;
+  async function updateTrend() {
+    try {
+      const rows = await fetchJSON('/summary/daily?days=30');
+      const labels = rows.map(r => new Date(r.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' }));
+      const values = rows.map(r => r.kwh_used);
+
+      const ctx = document.getElementById('trendChart');
+      if (trendChartInstance) trendChartInstance.destroy();
+      trendChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: '#1D4ED8',
+            borderRadius: 2,
+            maxBarThickness: 10,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#5F7B9C', maxTicksLimit: 6, font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#5F7B9C', font: { size: 10 } }, grid: { color: 'rgba(20,60,120,0.06)' } },
+          }
+        }
+      });
+    } catch (err) {
+      console.error('updateTrend error:', err);
+    }
+  }
+
+  // ---------- Custom month comparison ----------
+  const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+  function populateMonthPickers() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const years = [currentYear, currentYear - 1, currentYear - 2];
+
+    const buildOptions = () => {
+      let html = '';
+      years.forEach(y => {
+        THAI_MONTHS.forEach((name, idx) => {
+          const m = idx + 1;
+          if (y === currentYear && m > currentMonth) return;
+          html += `<option value="${y}-${m}">${name} ${y + 543}</option>`;
+        });
+      });
+      return html;
+    };
+
+    const optionsHtml = buildOptions();
+    const pickerA = document.getElementById('monthPickerA');
+    const pickerB = document.getElementById('monthPickerB');
+    pickerA.innerHTML = optionsHtml;
+    pickerB.innerHTML = optionsHtml;
+
+    pickerA.value = `${currentYear}-${currentMonth}`;
+    let prevMonth = currentMonth - 1, prevYear = currentYear;
+    if (prevMonth < 1) { prevMonth = 12; prevYear -= 1; }
+    pickerB.value = `${prevYear}-${prevMonth}`;
+  }
+
+  async function runCustomCompare() {
+    const el = document.getElementById('customCompareContent');
+    const [yearA, monthA] = document.getElementById('monthPickerA').value.split('-').map(Number);
+    const [yearB, monthB] = document.getElementById('monthPickerB').value.split('-').map(Number);
+
+    el.innerHTML = `<div class="empty-note">กำลังโหลด...</div>`;
+
+    try {
+      const [dataA, dataB] = await Promise.all([
+        fetchJSON(`/summary/month?year=${yearA}&month=${monthA}`),
+        fetchJSON(`/summary/month?year=${yearB}&month=${monthB}`),
+      ]);
+
+      if (dataA.kwh_used === 0 && dataB.kwh_used === 0) {
+        el.innerHTML = `<div class="empty-note">ยังไม่มีข้อมูลของทั้ง 2 เดือนที่เลือก</div>`;
+        return;
+      }
+
+      const pct = dataB.kwh_used > 0 ? ((dataA.kwh_used - dataB.kwh_used) / dataB.kwh_used) * 100 : null;
+      const badgeClass = pct === null ? 'neutral' : (pct > 0 ? 'up' : 'down');
+      const arrow = pct === null ? '' : (pct > 0 ? '▲' : '▼');
+      const pctText = pct === null ? 'N/A' : `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+
+      el.innerHTML = `
+        <div class="compare-row">
+          <span class="compare-name">${THAI_MONTHS[monthA - 1]} ${yearA + 543}</span>
+          <span class="compare-value">${fmt(dataA.kwh_used, 1)} kWh / ${fmt(dataA.cost, 0)} บาท</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-name">${THAI_MONTHS[monthB - 1]} ${yearB + 543}</span>
+          <span class="compare-value">${fmt(dataB.kwh_used, 1)} kWh / ${fmt(dataB.cost, 0)} บาท</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-name">เปลี่ยนแปลง</span>
+          <span class="badge ${badgeClass}">${pctText}</span>
+        </div>
+      `;
+    } catch (err) {
+      el.innerHTML = `<div class="empty-note">โหลดข้อมูลไม่สำเร็จ</div>`;
+      console.error('runCustomCompare error:', err);
+    }
+  }
+
+  // ---------- Budget (แสดงผลหน้าหลัก + ตั้งค่าในเมนู) ----------
+  async function loadBudget() {
+    try {
+      const data = await fetchJSON('/settings/budget');
+      const input = document.getElementById('budgetInput');
+      if (data.budget !== null && document.activeElement !== input) {
+        input.value = data.budget;
+      }
+      updateBudgetProgress(data.budget);
+    } catch (err) {
+      console.error('loadBudget error:', err);
+    }
+  }
+
+  async function updateBudgetProgress(budget) {
+    const mainStatusEl = document.getElementById('budgetStatusMain');
+    const fillEl = document.getElementById('budgetProgressFill');
+
+    if (!budget || budget <= 0) {
+      mainStatusEl.textContent = 'ยังไม่ได้ตั้งงบประมาณ';
+      fillEl.style.width = '0%';
+      return;
+    }
+
+    try {
+      const monthData = await fetchJSON('/summary/cycle');
+      const used = monthData.cost || 0;
+      const remaining = budget - used;
+      const percent = Math.min(100, (used / budget) * 100);
+
+      fillEl.style.width = `${percent}%`;
+      fillEl.classList.toggle('over', remaining < 0);
+
+      mainStatusEl.textContent = `${fmt(used, 0)} / ${fmt(budget, 0)} บาท`;
+    } catch (err) {
+      console.error('updateBudgetProgress error:', err);
+    }
+  }
+
+  async function saveBudget() {
+    const input = document.getElementById('budgetInput');
+    const statusEl = document.getElementById('budgetStatus');
+    const budget = parseFloat(input.value);
+
+    if (isNaN(budget) || budget < 0) {
+      statusEl.textContent = 'กรุณากรอกตัวเลขที่ถูกต้อง';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/settings/budget`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budget }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      statusEl.textContent = 'บันทึกสำเร็จ ✓';
+      updateBudgetProgress(budget);
+    } catch (err) {
+      statusEl.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      console.error('saveBudget error:', err);
+    }
+  }
+
+  document.getElementById('budgetSaveBtn').addEventListener('click', saveBudget);
+
+  // ---------- Ft rate ----------
+  async function loadFtRate() {
+    try {
+      const data = await fetchJSON('/settings/ft-rate');
+      const input = document.getElementById('ftInput');
+      if (data.ft_rate !== null && document.activeElement !== input) {
+        input.value = data.ft_rate;
+      }
+    } catch (err) {
+      console.error('loadFtRate error:', err);
+    }
+  }
+
+  async function saveFtRate() {
+    const input = document.getElementById('ftInput');
+    const statusEl = document.getElementById('ftStatus');
+    const ftRate = parseFloat(input.value);
+
+    if (isNaN(ftRate) || ftRate < 0) {
+      statusEl.textContent = 'กรุณากรอกตัวเลขที่ถูกต้อง';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/settings/ft-rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ft_rate: ftRate }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      statusEl.textContent = 'บันทึกสำเร็จ ✓ มีผลตั้งแต่วันถัดไป';
+    } catch (err) {
+      statusEl.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      console.error('saveFtRate error:', err);
+    }
+  }
+
+  document.getElementById('ftSaveBtn').addEventListener('click', saveFtRate);
+
+  // ---------- Tariff type (1.1.1 / 1.1.2) ----------
+  function setTariffButtonActive(type) {
+    document.getElementById('tariffBtn111').classList.toggle('active', type === '1.1.1');
+    document.getElementById('tariffBtn112').classList.toggle('active', type === '1.1.2');
+  }
+
+  async function loadTariffType() {
+    try {
+      const data = await fetchJSON('/settings/tariff-type');
+      setTariffButtonActive(data.tariff_type);
+    } catch (err) {
+      console.error('loadTariffType error:', err);
+    }
+  }
+
+  async function saveTariffType(type) {
+    const statusEl = document.getElementById('tariffStatus');
+    setTariffButtonActive(type);
+    try {
+      const res = await fetch(`${API_BASE}/settings/tariff-type`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tariff_type: type }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      statusEl.textContent = `เลือกประเภท ${type} แล้ว ✓`;
+    } catch (err) {
+      statusEl.textContent = 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง';
+      console.error('saveTariffType error:', err);
+    }
+  }
+
+  document.getElementById('tariffBtn111').addEventListener('click', () => saveTariffType('1.1.1'));
+  document.getElementById('tariffBtn112').addEventListener('click', () => saveTariffType('1.1.2'));
+
+  function refreshAll() {
+    updateLive();
+    updateToday();
+    updateTodayEnergyChart();
+    updateWeekTrend();
+    updateTrend();
+    loadBudget();
+    loadFtRate();
+    loadTariffType();
+  }
+
+  populateMonthPickers();
+  document.getElementById('compareBtn').addEventListener('click', runCustomCompare);
+  runCustomCompare();
+
+  refreshAll();
+  setInterval(refreshAll, 60000);
+</script>
+
+</body>
+</html>
